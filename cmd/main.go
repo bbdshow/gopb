@@ -14,14 +14,14 @@ func main() {
 func cpuRun() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	var int int
+	var i int
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			int++
-			strconv.Itoa(int)
+			i++
+			strconv.Itoa(i)
 		}
 	}
 }
@@ -29,13 +29,13 @@ func cpuRun() {
 func memRun() {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	var int string
+	var i string
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			int += "-"
+			i += "-"
 		}
 	}
 }

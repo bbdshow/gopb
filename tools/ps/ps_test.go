@@ -8,11 +8,10 @@ import (
 )
 
 func TestCPU(t *testing.T) {
-	ps := &PS{}
 	pid := int32(23384)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	state, err := ps.ReadCpuUse(ctx, pid, 5*time.Second)
+	state, err := ReadCpuUse(ctx, pid, 5*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,10 +29,9 @@ func TestCPU(t *testing.T) {
 
 func TestMem(t *testing.T) {
 	pid := int32(2928)
-	ps := &PS{}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	stat, err := ps.ReadMemoryUse(ctx, pid, time.Second)
+	stat, err := ReadMemoryUse(ctx, pid, time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}

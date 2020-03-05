@@ -7,15 +7,12 @@ import (
 	"time"
 )
 
-type PS struct {
-}
-
 type CPUStat struct {
 	UsePercent float64
 	Timestamp  int64
 }
 
-func (ps *PS) ReadCpuUse(ctx context.Context, pid int32, interval time.Duration) (<-chan *CPUStat, error) {
+func ReadCpuUse(ctx context.Context, pid int32, interval time.Duration) (<-chan *CPUStat, error) {
 	if interval.Seconds() <= 0 {
 		interval = time.Second
 	}
@@ -73,7 +70,7 @@ type MEMStat struct {
 	Timestamp int64
 }
 
-func (ps *PS) ReadMemoryUse(ctx context.Context, pid int32, interval time.Duration) (<-chan *MEMStat, error) {
+func ReadMemoryUse(ctx context.Context, pid int32, interval time.Duration) (<-chan *MEMStat, error) {
 	if interval.Seconds() <= 0 {
 		interval = time.Second
 	}
