@@ -21,13 +21,13 @@ func ReadCpuUse(ctx context.Context, pid int32, interval time.Duration) (<-chan 
 	if err != nil {
 		return nil, err
 	}
+	var prev float64
+	if t, err := p.Times(); err == nil {
+		prev = t.Total()
+	}
+
 	numCpu := runtime.NumCPU()
 	go func() {
-		var prev float64
-		tInit, err := p.Times()
-		if err == nil {
-			prev = tInit.Total()
-		}
 		tick := time.NewTicker(interval)
 		for {
 			select {
