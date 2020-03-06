@@ -14,7 +14,6 @@ func randSleep() {
 }
 
 func TestTiming(t *testing.T) {
-	timing := NewTiming(true)
 	wg := sync.WaitGroup{}
 	count := 100
 	concurrency := 3
@@ -25,7 +24,7 @@ func TestTiming(t *testing.T) {
 		go func(con, c int) {
 			for c > 0 {
 				c--
-				timing.Do(strconv.Itoa(con), func() {
+				Do(strconv.Itoa(con), func() {
 					randSleep()
 				})
 			}
@@ -35,7 +34,7 @@ func TestTiming(t *testing.T) {
 
 	wg.Wait()
 
-	data := timing.GetMethodData()
+	data := GetMethodData()
 	for _, d := range data {
 		t.Log(d)
 	}

@@ -107,3 +107,24 @@ func (t *Timing) Clear() {
 func (t *Timing) enable() bool {
 	return t.Enable
 }
+
+var std = NewTiming(true)
+
+func Do(method string, f func()) {
+	if method == "" || f == nil {
+		return
+	}
+	std.Do(method, f)
+}
+
+func SetEnable(enable bool) {
+	std.SetEnable(enable)
+}
+
+func Clear() {
+	std.Clear()
+}
+
+func GetMethodData() []*MethodData {
+	return std.GetMethodData()
+}
