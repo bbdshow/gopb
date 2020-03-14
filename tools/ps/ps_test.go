@@ -8,41 +8,33 @@ import (
 )
 
 func TestCPU(t *testing.T) {
-	pid := int32(23384)
+	pid := int32(12256)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	state, err := ReadCpuUse(ctx, pid, 5*time.Second)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	statCh := IntervalReadCpuUsePercent(ctx, pid, 5*time.Second)
 	for {
 		select {
-		case s := <-state:
+		case s := <-statCh:
 			if s == nil {
 				return
 			}
-			fmt.Println("use", s.UsePercent, "Timestamp", s.Timestamp)
+			fmt.Println(s.String())
 		}
 	}
 }
 
 func TestMem(t *testing.T) {
-	pid := int32(2928)
+	pid := int32(3504)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	stat, err := ReadMemoryUse(ctx, pid, time.Second)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	stat := IntervalReadMemoryUse(ctx, pid, time.Second)
 	for {
 		select {
 		case s := <-stat:
 			if s == nil {
 				return
 			}
-			fmt.Println("rss", s.RSSKb, "vm", s.VMSKb, "Timestamp", s.Timestamp)
+			fmt.Println(s.String())
 		}
 	}
 }

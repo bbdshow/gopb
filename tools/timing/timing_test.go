@@ -36,6 +36,6 @@ func TestTiming(t *testing.T) {
 
 	data := GetMethodData()
 	for _, d := range data {
-		t.Log(d)
+		t.Log(d.String())
 	}
 }

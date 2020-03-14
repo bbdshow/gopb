@@ -1,6 +1,7 @@
 package timing
 
 import (
+	"encoding/json"
 	"sync"
 	"time"
 )
@@ -63,12 +64,17 @@ func (t *Timing) waiting(method string, nano int64) {
 }
 
 type MethodData struct {
-	Method        string
-	DoCount       int64
-	TimeNanoTotal int64
-	MaxTimeNano   int64
-	MinTimeNano   int64
-	AvgTimeNano   int64
+	Method        string `json:"method"`
+	DoCount       int64  `json:"do_count"`
+	TimeNanoTotal int64  `json:"time_nano_total"`
+	MaxTimeNano   int64  `json:"max_time_nano"`
+	MinTimeNano   int64  `json:"min_time_nano"`
+	AvgTimeNano   int64  `json:"avg_time_nano"`
+}
+
+func (d MethodData) String() string {
+	v, _ := json.Marshal(d)
+	return string(v)
 }
 
 func (t *Timing) GetMethodData() []*MethodData {

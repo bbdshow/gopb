@@ -2,116 +2,122 @@ package ps
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/shirou/gopsutil/process"
 	"runtime"
 	"time"
 )
 
 type CPUStat struct {
-	UsePercent float64
-	Timestamp  int64
+	UsePercent float64 `json:"use_percent"`
+	Timestamp  int64   `json:"timestamp"`
 }
 
-func ReadCpuUse(ctx context.Context, pid int32, interval time.Duration) (<-chan *CPUStat, error) {
+func (s CPUStat) String() string {
+	v, _ := json.Marshal(s)
+	return string(v)
+}
+func IntervalReadCpuUsePercent(ctx context.Context, pid int32, interval time.Duration) <-chan *CPUStat {
 	if interval.Seconds() <= 0 {
 		interval = time.Second
 	}
-	cpuCh := make(chan *CPUStat, 1)
-	p, err := process.NewProcess(pid)
-	if err != nil {
-		return nil, err
-	}
-	var prev float64
-	if t, err := p.Times(); err == nil {
-		prev = t.Total()
-	}
-
 	numCpu := runtime.NumCPU()
+	cpuCh := make(chan *CPUStat, 1)
+	var preUse float64
 	go func() {
-		tick := time.NewTicker(interval)
 		for {
 			select {
 			case <-ctx.Done():
-				tick.Stop()
 				close(cpuCh)
 				return
-			case <-tick.C:
-				p, err := process.NewProcess(pid)
-				if err != nil {
-					if err == process.ErrorProcessNotRunning {
-						tick.Stop()
-						close(cpuCh)
-						return
-					}
-					continue
+			default:
+				stat := CPUStat{
+					UsePercent: 0,
+					Timestamp:  time.Now().Unix(),
 				}
-				t, err := p.Times()
-				if err == nil {
-					v := t.Total()
-					stat := CPUStat{
-						UsePercent: 0,
-						Timestamp:  time.Now().Unix(),
-					}
-					stat.UsePercent = (v - prev) / interval.Seconds() / float64(numCpu) * 100
-					cpuCh <- &stat
+				use, err := cpuUse(pid)
+				if err != nil && err == process.ErrorProcessNotRunning {
+					close(cpuCh)
+					return
+				}
 
-					prev = v
+				if preUse <= 0 {
+					preUse = use
+					break
 				}
+
+				stat.UsePercent = (use - preUse) / interval.Seconds() / float64(numCpu) * 100
+				cpuCh <- &stat
+
+				preUse = use
 			}
+			time.Sleep(interval)
 		}
 	}()
 
-	return cpuCh, nil
+	return cpuCh
+}
+
+func cpuUse(pid int32) (float64, error) {
+	p, err := process.NewProcess(pid)
+	if err != nil {
+		return 0, err
+	}
+	t, err := p.Times()
+	if err != nil {
+		return 0, err
+	}
+	return t.Total(), nil
 }
 
 type MEMStat struct {
-	RSSKb     uint64
-	VMSKb     uint64
-	Timestamp int64
+	RSS       uint64 `json:"rss"` // bytes
+	VMS       uint64 `json:"vms"`
+	Stack     uint64 `json:"stack"`
+	Swap      uint64 `json:"swap"`
+	Timestamp int64  `json:"timestamp"`
 }
 
-func ReadMemoryUse(ctx context.Context, pid int32, interval time.Duration) (<-chan *MEMStat, error) {
+func (s MEMStat) String() string {
+	v, _ := json.Marshal(s)
+	return string(v)
+}
+
+func IntervalReadMemoryUse(ctx context.Context, pid int32, interval time.Duration) <-chan *MEMStat {
 	if interval.Seconds() <= 0 {
 		interval = time.Second
 	}
 	memCh := make(chan *MEMStat, 1)
-	if ok, err := process.PidExists(pid); err != nil {
-		return nil, err
-	} else {
-		if !ok {
-			return nil, process.ErrorProcessNotRunning
-		}
-	}
-
 	go func() {
-		tick := time.NewTicker(interval)
 		for {
 			select {
 			case <-ctx.Done():
-				tick.Stop()
 				close(memCh)
 				return
-			case <-tick.C:
+			default:
 				p, err := process.NewProcess(pid)
-				if err != nil {
-					if err == process.ErrorProcessNotRunning {
-						tick.Stop()
-						close(memCh)
-						return
-					}
-					continue
+				if err != nil && err == process.ErrorProcessNotRunning {
+					close(memCh)
+					return
 				}
+				if p == nil {
+					break
+				}
+
 				stat, err := p.MemoryInfo()
 				if err == nil {
 					memCh <- &MEMStat{
-						RSSKb:     stat.RSS / 1000,
-						VMSKb:     stat.VMS / 1000,
+						RSS:       stat.RSS,
+						VMS:       stat.VMS,
+						Stack:     stat.Stack,
+						Swap:      stat.Swap,
 						Timestamp: time.Now().Unix(),
 					}
 				}
 			}
+			time.Sleep(interval)
 		}
 	}()
 
-	return memCh, nil
+	return memCh
 }
