@@ -6,6 +6,26 @@ import (
 	"time"
 )
 
+type Timer struct {
+	start time.Time
+}
+
+func NewTimer() *Timer {
+	timer := &Timer{}
+	return timer
+}
+
+func (timer *Timer) Reset() {
+	timer.start = time.Now().Local()
+}
+
+func (timer *Timer) Duration() int64 {
+	now := time.Now().Local()
+	nanos := now.Sub(timer.start).Nanoseconds()
+	micros := nanos / 1000
+	return micros
+}
+
 type Timing struct {
 	Enable  bool
 	mutex   sync.Mutex
