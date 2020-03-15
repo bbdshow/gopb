@@ -46,7 +46,6 @@ func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
 					wg.Done()
 					<-cChan
 				}()
-
 				request := httpClient.Request(req.URL, req.Method)
 				if tr != nil {
 					request.SetTransport(*tr)
@@ -60,7 +59,7 @@ func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
 				timer.Reset()
 
 				// 任务退出，toResponse 会在timeout或者执行完成后退出
-				rrCh := make(chan *Response)
+				rrCh := make(chan *Response, 1)
 				go func() {
 					rrCh <- toResponse(timer, request, req.ResponseContains != "")
 				}()
@@ -89,7 +88,6 @@ func toResponse(timer *timing.Timer, request *httplib.HTTPRequest, readBody bool
 		Error:      err != nil,
 		Body:       "",
 	}
-
 	if err == nil {
 		obj.StatusCode = resp.StatusCode
 		if resp.ContentLength < 0 { // 可能是未知长度

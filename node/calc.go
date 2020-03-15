@@ -1,32 +1,34 @@
 package node
 
 import (
+	"encoding/json"
 	"sort"
 	"strings"
 )
 
 type StatResult struct {
-	Concurrent     int
-	DoTime         int64
-	TotalCalls     int
-	HasCalled      int
-	Contains       int
-	Transferred    int64
-	Succeed        int
-	Errors         int
-	Resp200        int
-	Resp300        int
-	Resp400        int
-	Resp500        int
-	Times          []int
-	Line99Time     int
-	Line95Time     int
-	LineMedianTime int
-	MaxTime        int
+	Concurrent     int   `json:"concurrent"`
+	DoTime         int64 `json:"do_time"`
+	TotalCalls     int   `json:"total_calls"`
+	HasCalled      int   `json:"has_called"`
+	Contains       int   `json:"contains"`
+	Transferred    int64 `json:"transferred"`
+	Succeed        int   `json:"succeed"`
+	Errors         int   `json:"errors"`
+	Resp200        int   `json:"resp_2xx"`
+	Resp300        int   `json:"resp_3xx"`
+	Resp400        int   `json:"resp_4xx"`
+	Resp500        int   `json:"resp_5xx"`
+	Times          []int `json:"-"`
+	Line99Time     int   `json:"line_99_time"`
+	Line95Time     int   `json:"line_95_time"`
+	LineMedianTime int   `json:"line_median_time"`
+	MaxTime        int   `json:"max_time"`
 }
 
 func (r StatResult) String() string {
-	return ""
+	v, _ := json.Marshal(r)
+	return string(v)
 }
 
 func CalcStats(c, n int, doTime int64, contains string, stats chan *Response) *StatResult {
@@ -79,15 +81,22 @@ func CalcStats(c, n int, doTime int64, contains string, stats chan *Response) *S
 
 		r.Times[i] = int(stat.Duration)
 		i++
+
+		if len(stats) == 0 {
+			break
+		}
 	}
 
 	// 升序，然后计算时间分布
 	sort.Ints(r.Times)
+
 	timeNum := len(r.Times)
 	r.Line99Time = r.Times[(timeNum/100*99)] / 1000
 	r.Line95Time = r.Times[(timeNum/100*95)] / 1000 // ms
 	r.LineMedianTime = r.Times[(timeNum-1)/2] / 1000
 	r.MaxTime = r.Times[timeNum-1] / 1000
 
-	return nil
+	r.Times = nil
+
+	return r
 }
