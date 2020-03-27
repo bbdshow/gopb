@@ -46,6 +46,7 @@ func mockServe(port string) {
 			w.WriteHeader(200)
 			w.Write([]byte("POST METHOD"))
 		}
+		return
 	})
 	if err := http.ListenAndServe(fmt.Sprintf(":%s", port), nil); err != nil {
 		log.Fatal(err)

@@ -2,30 +2,44 @@ package node
 
 import (
 	"context"
-	"github.com/huzhongqing/httplib"
+	"crypto/tls"
 	"github/huzhongqing/gopb/tools/timing"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"sync"
 )
 
 type Client struct {
-	clients *httplib.ClientPool
+	client *http.Client
 }
 
-func NewClient() Client {
-	return Client{clients: httplib.NewClientPool()}
+func NewClient() *Client {
+	return &Client{client: NewDefaultClient()}
+}
+
+func (cli *Client) SetClient(c *http.Client) {
+	cli.client = c
+}
+
+func (cli *Client) SetDisableKeepAlives(disable bool) {
+	cli.client.Transport.(*http.Transport).DisableKeepAlives = disable
+}
+
+func (cli *Client) SetTLSConfig(tlsCfg *tls.Config) {
+	cli.client.Transport.(*http.Transport).TLSClientConfig = tlsCfg
 }
 
 func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
-	var tr *http.Transport
-	if req.Scheme == "https" {
-		tr = &http.Transport{TLSClientConfig: req.Tls, DisableKeepAlives: req.DisableKeepAlive}
-	} else {
-		tr = &http.Transport{DisableKeepAlives: req.DisableKeepAlive}
-	}
 	totalTimer := timing.NewTimer()
 	totalTimer.Reset()
+
+	if strings.ToUpper(req.Scheme) == "HTTPS" {
+		if req.Tls != nil {
+			cli.SetTLSConfig(req.Tls)
+		}
+	}
+	cli.SetDisableKeepAlives(req.DisableKeepAlive)
 
 	cChan := make(chan struct{}, c)
 	respChan := make(chan *Response, n+1)
@@ -40,28 +54,12 @@ func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
 			cChan <- struct{}{}
 			go func() {
 				timer := timing.NewTimer()
-				httpClient := cli.clients.PullClient()
-				defer func() {
-					cli.clients.PushClient(httpClient)
-					wg.Done()
-					<-cChan
-				}()
-				request := httpClient.Request(req.URL, req.Method)
-				if tr != nil {
-					request.SetTransport(*tr)
-				}
-				for k, v := range req.Headers {
-					request.SetHeader(k, v)
-				}
-				if req.Body != nil {
-					request.SetBody(req.Body)
-				}
 				timer.Reset()
 
 				// 任务退出，toResponse 会在timeout或者执行完成后退出
 				rrCh := make(chan *Response, 1)
 				go func() {
-					rrCh <- toResponse(timer, request, req.ResponseContains != "")
+					rrCh <- cli.toResponse(timer, req.GenHTTPRequest(), req.ResponseContains != "")
 				}()
 
 				select {
@@ -70,6 +68,9 @@ func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
 				case <-ctx.Done():
 					// 正在运行的任务，立即返回
 				}
+
+				wg.Done()
+				<-cChan
 			}()
 		}
 	}
@@ -79,8 +80,8 @@ exit:
 	return CalcStats(c, n, totalTimer.Duration(), req.ResponseContains, respChan)
 }
 
-func toResponse(timer *timing.Timer, request *httplib.HTTPRequest, readBody bool) *Response {
-	resp, err := request.Response()
+func (cli *Client) toResponse(timer *timing.Timer, req *http.Request, readBody bool) *Response {
+	resp, err := cli.client.Do(req)
 	obj := &Response{
 		Size:       0,
 		StatusCode: 0,
@@ -107,5 +108,6 @@ func toResponse(timer *timing.Timer, request *httplib.HTTPRequest, readBody bool
 		// close
 		_ = resp.Body.Close()
 	}
+	//fmt.Println("response ", *obj)
 	return obj
 }

@@ -48,6 +48,7 @@ func CalcStats(c, n int, doTime int64, contains string, stats chan *Response) *S
 		Line95Time:     0,
 		LineMedianTime: 0,
 	}
+
 	if r.HasCalled == 0 {
 		return r
 	}

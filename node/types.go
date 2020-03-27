@@ -1,7 +1,11 @@
 package node
 
 import (
+	"bytes"
 	"crypto/tls"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 )
 
 type Config struct {
@@ -21,6 +25,27 @@ type Request struct {
 	Insecure         bool // 建立不安全连接
 	Tls              *tls.Config
 	ResponseContains string
+}
+
+func (r *Request) GenHTTPRequest() *http.Request {
+	_url, _ := url.Parse(r.URL)
+	req := &http.Request{
+		Method:        r.Method,
+		URL:           _url,
+		Body:          nil,
+		GetBody:       nil,
+		ContentLength: 0,
+	}
+	for k, v := range r.Headers {
+		req.Header.Set(k, v)
+	}
+	if r.Body != nil {
+		buf := bytes.NewBuffer(r.Body)
+		req.Body = ioutil.NopCloser(buf)
+		req.ContentLength = int64(buf.Len())
+	}
+
+	return req
 }
 
 type Response struct {
