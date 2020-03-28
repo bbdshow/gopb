@@ -2,12 +2,14 @@ package node
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
+	"time"
 )
 
 type StatResult struct {
-	Concurrent     int   `json:"concurrent"`
+	Concurrent     int   `json:"concurrent"` // 并发
 	DoTime         int64 `json:"do_time"`
 	TotalCalls     int   `json:"total_calls"`
 	HasCalled      int   `json:"has_called"`
@@ -29,6 +31,31 @@ type StatResult struct {
 func (r StatResult) String() string {
 	v, _ := json.Marshal(r)
 	return string(v)
+}
+
+func (r StatResult) FormatString() string {
+	return fmt.Sprintf(`Do total time: %s
+Concurrent: %d
+Total calls: %d
+Has called: %d
+Succeed: %d
+Error: %d
+Contains: %d
+Transferred size: %d(byte)
+Status code 2xx: %d
+Status code 3xx: %d
+Status code 4xx: %d
+Status code 5xx: %d
+Line99 time: %s
+Line95 time: %s
+Lime50 time: %s
+Max time: %s`,
+		timeMillToString(int(r.DoTime)), r.Concurrent, r.TotalCalls, r.HasCalled, r.Succeed, r.Errors, r.Contains, r.Transferred,
+		r.Resp200, r.Resp300, r.Resp400, r.Resp500, timeMillToString(r.Line99Time), timeMillToString(r.Line95Time), timeMillToString(r.LineMedianTime), timeMillToString(r.MaxTime))
+}
+
+func timeMillToString(t int) string {
+	return (time.Duration(t) * time.Millisecond).String()
 }
 
 func CalcStats(c, n int, doTime int64, contains string, stats chan *Response) *StatResult {
@@ -66,7 +93,6 @@ func CalcStats(c, n int, doTime int64, contains string, stats chan *Response) *S
 				r.Contains++
 			}
 		}
-
 		switch {
 		case stat.StatusCode < 200:
 		case stat.StatusCode < 300:

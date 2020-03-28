@@ -3,9 +3,39 @@ package ps
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 )
+
+func cpuRun() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	var i int
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			i++
+			strconv.Itoa(i)
+		}
+	}
+}
+
+func memRun() {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	var i string
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			i += "-"
+		}
+	}
+}
 
 func TestCPU(t *testing.T) {
 	pid := int32(12256)
