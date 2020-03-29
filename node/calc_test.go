@@ -15,17 +15,18 @@ func TestCalcStats(t *testing.T) {
 	req := Request{
 		Method: "GET",
 		Scheme: "http",
-		//URL:    "http://127.0.0.1:20001/mock",
-		URL:              "http://www.baidu.com",
+		URL:    "http://127.0.0.1:20001/mock",
+		//URL:              "http://www.baidu.com",
+		Params:           map[string]string{"wd": "test"},
 		Headers:          nil,
 		Body:             "",
 		DisableKeepAlive: false,
 		Insecure:         false,
 		Tls:              nil,
-		ResponseContains: "o",
+		ResponseContains: "wd=test",
 	}
 	n := -1
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 3*time.Second)
 	//ctx := context.Background()
 	stat := cli.Do(ctx, 2, n, req)
 	fmt.Println(stat.FormatString())
@@ -46,5 +47,5 @@ func mockServe(port string) {
 func mockHandler(w http.ResponseWriter, r *http.Request) {
 	time.Sleep(time.Duration(rand.Int31n(10)) * time.Millisecond)
 	w.WriteHeader(200)
-	w.Write([]byte("ok mock server"))
+	w.Write([]byte("ok mock server" + r.URL.String()))
 }

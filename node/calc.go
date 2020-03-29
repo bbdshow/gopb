@@ -38,27 +38,27 @@ func (r StatResult) String() string {
 }
 
 func (r StatResult) FormatString() string {
-	return fmt.Sprintf(`========== Performance benchmark ==========
-URL: %s
-Concurrent: %d
-Total calls: %d
-Succeed: %d
-Error: %d
-Response body size: %s
+	return fmt.Sprintf(`========== Benchmark ==========
+	URL: %s
+	Concurrent: %d
+	Total calls: %d
+	Succeed: %d
+	Error: %d
+	Response body size: %s
 ========== Times ==========
-Total time: %s
-Requests per second: %.2f
-Avg time per request: %s
-Median time per request: %s
-95th percentile time: %s
-99th percentile time: %s
-Slowest time for request: %s
+	Total time: %s
+	Requests per second: %.2f
+	Avg time per request: %s
+	Median time per request: %s
+	95th percentile time: %s
+	99th percentile time: %s
+	Slowest time for request: %s
 ========== Status ==========
-Status code 2xx: %d
-Status code 3xx: %d
-Status code 4xx: %d
-Status code 5xx: %d
-Match Response: %d`,
+	Status code 2xx: %d
+	Status code 3xx: %d
+	Status code 4xx: %d
+	Status code 5xx: %d
+	Match Response: %d`,
 		r.URL, r.Concurrent, r.TotalCalls, r.Succeed, r.Errors, byteSizeToString(r.ResponseBodySize),
 		timeMillToString(int(r.Duration)), r.RequestsPerSecond, timeMillToString(r.AvgTime), timeMillToString(r.LineMedianTime),
 		timeMillToString(r.Line95Time), timeMillToString(r.Line99Time), timeMillToString(r.MaxTime),
@@ -99,7 +99,7 @@ func ConstantlyCalcStats(url string, c int, contains string, stats chan *Respons
 			}
 			r.TotalCalls++
 			if stat.Error != nil {
-				if errCount == 0 || errCount%1000 == 0 {
+				if errCount < 10 || errCount%1000 == 0 {
 					log.Printf("error count %d: %s", errCount+1, stat.Error.Error())
 				}
 				errCount++
@@ -130,80 +130,6 @@ func ConstantlyCalcStats(url string, c int, contains string, stats chan *Respons
 		}
 	exitFor:
 		break
-	}
-
-	// 升序，然后计算时间分布
-	sort.Ints(r.Times)
-
-	timeNum := len(r.Times)
-	r.SumTime = r.SumTime / 1e3
-	r.RequestsPerSecond = float64(timeNum) / (r.SumTime / 1e3)
-	r.AvgTime = int(r.SumTime / float64(timeNum))
-	r.LineMedianTime = r.Times[(timeNum-1)/2] / 1000
-	r.Line95Time = r.Times[(timeNum/100*95)] / 1000 // ms
-	r.Line99Time = r.Times[(timeNum/100*99)] / 1000
-	r.MaxTime = r.Times[timeNum-1] / 1000
-
-	r.Times = nil
-
-	return r
-}
-
-func CalcStats(url string, c, n int, d int64, contains string, stats chan *Response) *StatResult {
-	r := &StatResult{
-		URL:            url,
-		Concurrent:     c,
-		TotalCalls:     n,
-		Duration:       d / 1e3,
-		Contains:       0,
-		Succeed:        0,
-		Resp200:        0,
-		Resp300:        0,
-		Resp400:        0,
-		Resp500:        0,
-		Times:          make([]int, 0, n),
-		Line99Time:     0,
-		Line95Time:     0,
-		LineMedianTime: 0,
-	}
-
-	i := 0
-	for stat := range stats {
-		if stat == nil {
-			break
-		}
-		if stat.Error != nil {
-			if errCount == 0 || errCount%1000 == 0 {
-				log.Printf("error count %d: %s", errCount+1, stat.Error.Error())
-			}
-			errCount++
-			r.Errors++
-		}
-		r.ResponseBodySize += stat.Size
-		if len(contains) > 0 && len(stat.Body) > 0 {
-			if strings.Contains(stat.Body, contains) {
-				r.Contains++
-			}
-		}
-		switch {
-		case stat.StatusCode < 200:
-		case stat.StatusCode < 300:
-			r.Resp200++
-			r.Succeed++
-		case stat.StatusCode < 400:
-			r.Resp300++
-		case stat.StatusCode < 500:
-			r.Resp400++
-		case stat.StatusCode < 600:
-			r.Resp500++
-		}
-		r.SumTime += float64(stat.Duration)
-		r.Times[i] = int(stat.Duration)
-		i++
-
-		if len(stats) == 0 {
-			break
-		}
 	}
 
 	// 升序，然后计算时间分布

@@ -48,12 +48,14 @@ func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
 	}
 	cli.SetDisableKeepAlives(req.DisableKeepAlive)
 
+	request := req.GenHTTPRequest()
+
 	cChan := make(chan struct{}, c)
 	respChan := make(chan *Response, c+1)
 	statChan := make(chan *StatResult, 1)
 	go func() {
 		// 计算返回值
-		statChan <- ConstantlyCalcStats(req.URL, c, req.ResponseContains, respChan)
+		statChan <- ConstantlyCalcStats(request.URL.String(), c, req.ResponseContains, respChan)
 	}()
 	wg := sync.WaitGroup{}
 	for i := 0; i < n || n == -1; i++ {
@@ -71,7 +73,7 @@ func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
 				// 任务退出，toResponse 会在timeout或者执行完成后退出
 				rrCh := make(chan *Response, 1)
 				go func() {
-					rrCh <- cli.toResponse(timer, req.GenHTTPRequest(), req.ResponseContains != "")
+					rrCh <- cli.toResponse(timer, request.Clone(context.TODO()), req.ResponseContains != "")
 				}()
 
 				select {

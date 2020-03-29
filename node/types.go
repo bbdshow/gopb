@@ -45,18 +45,19 @@ type Request struct {
 }
 
 func (r *Request) GenHTTPRequest() *http.Request {
+	formatURL := ""
 	if len(r.Params) > 0 {
 		if !strings.HasSuffix(r.URL, "?") {
-			r.URL += "?"
+			formatURL = r.URL + "?"
 		}
 		param := ""
 		for k, v := range r.Params {
 			param += fmt.Sprintf("%s=%s&", k, url.QueryEscape(v))
 		}
-		r.URL = r.URL + strings.TrimRight(param, "&")
-	}
 
-	_url, _ := url.Parse(r.URL)
+		formatURL = formatURL + strings.TrimRight(param, "&")
+	}
+	_url, _ := url.Parse(formatURL)
 	req := &http.Request{
 		Method:        r.Method,
 		URL:           _url,
