@@ -11,7 +11,8 @@ import (
 type StatResult struct {
 	URL               string  `json:"url"`
 	Concurrent        int     `json:"concurrent"` // 并发
-	TotalTime         float64 `json:"total_time"`
+	Duration          int64   `json:"duration"`
+	SumTime           float64 `json:"sum_time"`
 	TotalCalls        int     `json:"total_calls"`
 	HasCalled         int     `json:"has_called"`
 	Contains          int     `json:"contains"`
@@ -60,7 +61,7 @@ Status code 4xx: %d
 Status code 5xx: %d
 Match Response: %d`,
 		r.URL, r.Concurrent, r.TotalCalls, r.HasCalled, r.Succeed, r.Errors, r.ResponseBodySize,
-		timeMillToString(int(r.TotalTime)), r.RequestsPerSecond, timeMillToString(r.AvgTime), timeMillToString(r.LineMedianTime),
+		timeMillToString(int(r.Duration)), r.RequestsPerSecond, timeMillToString(r.AvgTime), timeMillToString(r.LineMedianTime),
 		timeMillToString(r.Line95Time), timeMillToString(r.Line99Time), timeMillToString(r.MaxTime),
 		r.Resp200, r.Resp300, r.Resp400, r.Resp500, r.Contains)
 }
@@ -69,11 +70,84 @@ func timeMillToString(t int) string {
 	return (time.Duration(t) * time.Millisecond).String()
 }
 
-func CalcStats(url string, c, n int, contains string, stats chan *Response) *StatResult {
+func ConstantlyCalcStats(url string, c, n int, contains string, stats chan *Response) *StatResult {
 	r := &StatResult{
 		URL:            url,
 		Concurrent:     c,
 		TotalCalls:     n,
+		Contains:       0,
+		Succeed:        0,
+		Resp200:        0,
+		Resp300:        0,
+		Resp400:        0,
+		Resp500:        0,
+		Times:          make([]int, 0, n),
+		Line99Time:     0,
+		Line95Time:     0,
+		LineMedianTime: 0,
+	}
+
+	for {
+		select {
+		case stat := <-stats:
+			if stat == nil {
+				goto exitFor
+			}
+			r.HasCalled++
+
+			if stat.Error {
+				r.Errors++
+			}
+			r.ResponseBodySize += stat.Size
+			if len(contains) > 0 && len(stat.Body) > 0 {
+				if strings.Contains(stat.Body, contains) {
+					r.Contains++
+				}
+			}
+			switch {
+			case stat.StatusCode < 200:
+			case stat.StatusCode < 300:
+				r.Resp200++
+				r.Succeed++
+			case stat.StatusCode < 400:
+				r.Resp300++
+			case stat.StatusCode < 500:
+				r.Resp400++
+			case stat.StatusCode < 600:
+				r.Resp500++
+			}
+			r.SumTime += float64(stat.Duration)
+			r.Times = append(r.Times, int(stat.Duration))
+
+			continue
+		}
+	exitFor:
+		break
+	}
+
+	// 升序，然后计算时间分布
+	sort.Ints(r.Times)
+
+	timeNum := len(r.Times)
+	r.SumTime = r.SumTime / 1e3
+	r.RequestsPerSecond = float64(timeNum) / (r.SumTime / 1e3)
+	r.AvgTime = int(r.SumTime / float64(timeNum))
+	r.LineMedianTime = r.Times[(timeNum-1)/2] / 1000
+	r.Line95Time = r.Times[(timeNum/100*95)] / 1000 // ms
+	r.Line99Time = r.Times[(timeNum/100*99)] / 1000
+	r.MaxTime = r.Times[timeNum-1] / 1000
+
+	r.Times = nil
+
+	return r
+}
+
+func CalcStats(url string, c, n int, d int64, contains string, stats chan *Response) *StatResult {
+	r := &StatResult{
+		URL:            url,
+		Concurrent:     c,
+		TotalCalls:     n,
+		Duration:       d / 1e3,
 		HasCalled:      len(stats),
 		Contains:       0,
 		Succeed:        0,
@@ -81,7 +155,7 @@ func CalcStats(url string, c, n int, contains string, stats chan *Response) *Sta
 		Resp300:        0,
 		Resp400:        0,
 		Resp500:        0,
-		Times:          make([]int, len(stats)),
+		Times:          make([]int, 0, n),
 		Line99Time:     0,
 		Line95Time:     0,
 		LineMedianTime: 0,
@@ -91,6 +165,7 @@ func CalcStats(url string, c, n int, contains string, stats chan *Response) *Sta
 		return r
 	}
 	i := 0
+
 	for stat := range stats {
 		if stat == nil {
 			break
@@ -116,7 +191,7 @@ func CalcStats(url string, c, n int, contains string, stats chan *Response) *Sta
 		case stat.StatusCode < 600:
 			r.Resp500++
 		}
-		r.TotalTime += float64(stat.Duration)
+		r.SumTime += float64(stat.Duration)
 		r.Times[i] = int(stat.Duration)
 		i++
 
@@ -129,9 +204,9 @@ func CalcStats(url string, c, n int, contains string, stats chan *Response) *Sta
 	sort.Ints(r.Times)
 
 	timeNum := len(r.Times)
-	r.TotalTime = r.TotalTime / 1e3
-	r.RequestsPerSecond = float64(timeNum) / (r.TotalTime / 1e3)
-	r.AvgTime = int(r.TotalTime / float64(timeNum))
+	r.SumTime = r.SumTime / 1e3
+	r.RequestsPerSecond = float64(timeNum) / (r.SumTime / 1e3)
+	r.AvgTime = int(r.SumTime / float64(timeNum))
 	r.LineMedianTime = r.Times[(timeNum-1)/2] / 1000
 	r.Line95Time = r.Times[(timeNum/100*95)] / 1000 // ms
 	r.Line99Time = r.Times[(timeNum/100*99)] / 1000

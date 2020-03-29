@@ -13,24 +13,24 @@ import (
 
 func TestCalcStats(t *testing.T) {
 	go func() {
-		mockServe("20001")
+		//mockServe("20001")
 	}()
 	time.Sleep(2 * time.Second)
 	cli := NewClient()
 	req := Request{
 		Method: "GET",
 		Scheme: "http",
-		URL:    "http://127.0.0.1:20001/mock",
-		//URL:              "http://www.baidu.com",
+		//URL:    "http://127.0.0.1:20001/mock",
+		URL:              "http://www.baidu.com",
 		Headers:          nil,
 		Body:             "",
 		DisableKeepAlive: false,
 		Insecure:         false,
 		Tls:              nil,
-		ResponseContains: "o",
+		ResponseContains: "",
 	}
-	n := 100
-	stat := cli.Do(context.Background(), 1, n, req)
+	n := 100000
+	stat := cli.Do(context.Background(), 1000, n, req)
 	fmt.Println(stat.FormatString())
 	assert.Equal(t, stat.HasCalled, n, fmt.Sprintf("hasCalled must equal %d", n))
 

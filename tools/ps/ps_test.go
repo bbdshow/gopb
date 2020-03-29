@@ -54,10 +54,10 @@ func TestCPU(t *testing.T) {
 }
 
 func TestMem(t *testing.T) {
-	pid := int32(3504)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	stat := IntervalReadMemoryUse(ctx, pid, time.Second)
+	pid := int32(17656)
+	//ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	//defer cancel()
+	stat := IntervalReadMemoryUse(context.Background(), pid, time.Second)
 	for {
 		select {
 		case s := <-stat:

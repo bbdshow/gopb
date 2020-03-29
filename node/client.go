@@ -31,6 +31,8 @@ func (cli *Client) SetTLSConfig(tlsCfg *tls.Config) {
 }
 
 func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
+	totalTimer := timing.NewTimer()
+	totalTimer.Reset()
 	if strings.ToUpper(req.Scheme) == "HTTPS" {
 		if req.Tls != nil {
 			cli.SetTLSConfig(req.Tls)
@@ -39,7 +41,12 @@ func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
 	cli.SetDisableKeepAlives(req.DisableKeepAlive)
 
 	cChan := make(chan struct{}, c)
-	respChan := make(chan *Response, n+1)
+	respChan := make(chan *Response, c+1)
+	statChan := make(chan *StatResult, 1)
+	go func() {
+		// 计算返回值
+		statChan <- ConstantlyCalcStats(req.URL, c, n, req.ResponseContains, respChan)
+	}()
 	wg := sync.WaitGroup{}
 	for i := 0; i < n; i++ {
 		select {
@@ -73,8 +80,12 @@ func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
 	}
 exit:
 	wg.Wait()
-	// 计算返回值
-	return CalcStats(req.URL, c, n, req.ResponseContains, respChan)
+	respChan <- nil
+
+	stat := <-statChan
+	stat.Duration = totalTimer.Duration() / 1e3
+
+	return stat
 }
 
 func (cli *Client) toResponse(timer *timing.Timer, req *http.Request, readBody bool) *Response {
@@ -82,24 +93,19 @@ func (cli *Client) toResponse(timer *timing.Timer, req *http.Request, readBody b
 	obj := &Response{
 		Size:       0,
 		StatusCode: 0,
-		Duration:   timer.Duration(),
-		Error:      err != nil,
-		Body:       "",
+
+		Duration: timer.Duration(),
+		Error:    err != nil,
+		Body:     "",
 	}
 	if err == nil {
 		obj.StatusCode = resp.StatusCode
-		if resp.ContentLength < 0 { // 可能是未知长度
+		obj.Size = resp.ContentLength // 如果 resp.ContentLength = -1 也没关系
+		if readBody {
 			b, err := ioutil.ReadAll(resp.Body)
 			if err == nil {
+				obj.Body = string(b)
 				obj.Size = int64(len(b))
-			}
-		} else {
-			obj.Size = resp.ContentLength
-			if readBody {
-				b, err := ioutil.ReadAll(resp.Body)
-				if err == nil {
-					obj.Body = string(b)
-				}
 			}
 		}
 		// close
