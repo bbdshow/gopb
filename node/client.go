@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Client struct {
@@ -31,6 +32,13 @@ func (cli *Client) SetTLSConfig(tlsCfg *tls.Config) {
 }
 
 func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
+	if n == -1 {
+		_, ok := ctx.Deadline()
+		if !ok {
+			// 默认时间
+			ctx, _ = context.WithTimeout(ctx, 30*time.Second)
+		}
+	}
 	totalTimer := timing.NewTimer()
 	totalTimer.Reset()
 	if strings.ToUpper(req.Scheme) == "HTTPS" {
@@ -45,10 +53,10 @@ func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
 	statChan := make(chan *StatResult, 1)
 	go func() {
 		// 计算返回值
-		statChan <- ConstantlyCalcStats(req.URL, c, n, req.ResponseContains, respChan)
+		statChan <- ConstantlyCalcStats(req.URL, c, req.ResponseContains, respChan)
 	}()
 	wg := sync.WaitGroup{}
-	for i := 0; i < n; i++ {
+	for i := 0; i < n || n == -1; i++ {
 		select {
 		case <-ctx.Done():
 			// 未分配的任务，不再分配
@@ -93,10 +101,9 @@ func (cli *Client) toResponse(timer *timing.Timer, req *http.Request, readBody b
 	obj := &Response{
 		Size:       0,
 		StatusCode: 0,
-
-		Duration: timer.Duration(),
-		Error:    err != nil,
-		Body:     "",
+		Duration:   timer.Duration(),
+		Error:      err,
+		Body:       "",
 	}
 	if err == nil {
 		obj.StatusCode = resp.StatusCode

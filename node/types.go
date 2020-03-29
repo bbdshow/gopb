@@ -81,6 +81,6 @@ type Response struct {
 	Size       int64  `json:"size"`
 	StatusCode int    `json:"status_code"`
 	Duration   int64  `json:"duration"` // micro
-	Error      bool   `json:"error"`
+	Error      error  `json:"error"`
 	Body       string `json:"body"`
 }

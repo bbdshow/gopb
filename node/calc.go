@@ -3,6 +3,7 @@ package node
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sort"
 	"strings"
 	"time"
@@ -14,7 +15,6 @@ type StatResult struct {
 	Duration          int64   `json:"duration"`
 	SumTime           float64 `json:"sum_time"`
 	TotalCalls        int     `json:"total_calls"`
-	HasCalled         int     `json:"has_called"`
 	Contains          int     `json:"contains"`
 	ResponseBodySize  int64   `json:"response_body_size"`
 	Succeed           int     `json:"succeed"`
@@ -42,10 +42,9 @@ func (r StatResult) FormatString() string {
 URL: %s
 Concurrent: %d
 Total calls: %d
-Has called: %d
 Succeed: %d
 Error: %d
-Response body size: %d(byte)
+Response body size: %s
 ========== Times ==========
 Total time: %s
 Requests per second: %.2f
@@ -60,7 +59,7 @@ Status code 3xx: %d
 Status code 4xx: %d
 Status code 5xx: %d
 Match Response: %d`,
-		r.URL, r.Concurrent, r.TotalCalls, r.HasCalled, r.Succeed, r.Errors, r.ResponseBodySize,
+		r.URL, r.Concurrent, r.TotalCalls, r.Succeed, r.Errors, byteSizeToString(r.ResponseBodySize),
 		timeMillToString(int(r.Duration)), r.RequestsPerSecond, timeMillToString(r.AvgTime), timeMillToString(r.LineMedianTime),
 		timeMillToString(r.Line95Time), timeMillToString(r.Line99Time), timeMillToString(r.MaxTime),
 		r.Resp200, r.Resp300, r.Resp400, r.Resp500, r.Contains)
@@ -70,21 +69,26 @@ func timeMillToString(t int) string {
 	return (time.Duration(t) * time.Millisecond).String()
 }
 
-func ConstantlyCalcStats(url string, c, n int, contains string, stats chan *Response) *StatResult {
+func byteSizeToString(s int64) string {
+	size := float64(s)
+	switch {
+	case size >= 1e4 && size < 1e7:
+		return fmt.Sprintf("%.2f kb", size/1024)
+	case size >= 1e7 && size < 1e10:
+		return fmt.Sprintf("%.2f mb", size/(1024*1024))
+	case size >= 1e10:
+		return fmt.Sprintf("%.2f gb", size/(1024*1024*1024))
+	}
+	return fmt.Sprintf("%d b", s)
+}
+
+var errCount int64
+
+func ConstantlyCalcStats(url string, c int, contains string, stats chan *Response) *StatResult {
 	r := &StatResult{
-		URL:            url,
-		Concurrent:     c,
-		TotalCalls:     n,
-		Contains:       0,
-		Succeed:        0,
-		Resp200:        0,
-		Resp300:        0,
-		Resp400:        0,
-		Resp500:        0,
-		Times:          make([]int, 0, n),
-		Line99Time:     0,
-		Line95Time:     0,
-		LineMedianTime: 0,
+		URL:        url,
+		Concurrent: c,
+		Times:      make([]int, 0, c),
 	}
 
 	for {
@@ -93,9 +97,12 @@ func ConstantlyCalcStats(url string, c, n int, contains string, stats chan *Resp
 			if stat == nil {
 				goto exitFor
 			}
-			r.HasCalled++
-
-			if stat.Error {
+			r.TotalCalls++
+			if stat.Error != nil {
+				if errCount == 0 || errCount%1000 == 0 {
+					log.Printf("error count %d: %s", errCount+1, stat.Error.Error())
+				}
+				errCount++
 				r.Errors++
 			}
 			r.ResponseBodySize += stat.Size
@@ -148,7 +155,6 @@ func CalcStats(url string, c, n int, d int64, contains string, stats chan *Respo
 		Concurrent:     c,
 		TotalCalls:     n,
 		Duration:       d / 1e3,
-		HasCalled:      len(stats),
 		Contains:       0,
 		Succeed:        0,
 		Resp200:        0,
@@ -161,16 +167,16 @@ func CalcStats(url string, c, n int, d int64, contains string, stats chan *Respo
 		LineMedianTime: 0,
 	}
 
-	if r.HasCalled == 0 {
-		return r
-	}
 	i := 0
-
 	for stat := range stats {
 		if stat == nil {
 			break
 		}
-		if stat.Error {
+		if stat.Error != nil {
+			if errCount == 0 || errCount%1000 == 0 {
+				log.Printf("error count %d: %s", errCount+1, stat.Error.Error())
+			}
+			errCount++
 			r.Errors++
 		}
 		r.ResponseBodySize += stat.Size

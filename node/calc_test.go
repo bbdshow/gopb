@@ -3,7 +3,6 @@ package node
 import (
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"log"
 	"math/rand"
 	"net/http"
@@ -12,10 +11,6 @@ import (
 )
 
 func TestCalcStats(t *testing.T) {
-	go func() {
-		//mockServe("20001")
-	}()
-	time.Sleep(2 * time.Second)
 	cli := NewClient()
 	req := Request{
 		Method: "GET",
@@ -27,14 +22,19 @@ func TestCalcStats(t *testing.T) {
 		DisableKeepAlive: false,
 		Insecure:         false,
 		Tls:              nil,
-		ResponseContains: "",
+		ResponseContains: "o",
 	}
-	n := 100000
-	stat := cli.Do(context.Background(), 1000, n, req)
+	n := -1
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	//ctx := context.Background()
+	stat := cli.Do(ctx, 2, n, req)
 	fmt.Println(stat.FormatString())
-	assert.Equal(t, stat.HasCalled, n, fmt.Sprintf("hasCalled must equal %d", n))
 
 	//time.Sleep(time.Minute)
+}
+
+func TestMockServer(t *testing.T) {
+	mockServe("20001")
 }
 
 func mockServe(port string) {
@@ -44,7 +44,7 @@ func mockServe(port string) {
 }
 
 func mockHandler(w http.ResponseWriter, r *http.Request) {
-	time.Sleep(time.Duration(rand.Int31n(100)) * time.Millisecond)
+	time.Sleep(time.Duration(rand.Int31n(10)) * time.Millisecond)
 	w.WriteHeader(200)
-	w.Write([]byte("ok"))
+	w.Write([]byte("ok mock server"))
 }
