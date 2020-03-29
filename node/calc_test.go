@@ -23,13 +23,13 @@ func TestCalcStats(t *testing.T) {
 		URL:    "http://127.0.0.1:20001/mock",
 		//URL:              "http://www.baidu.com",
 		Headers:          nil,
-		Body:             nil,
+		Body:             "",
 		DisableKeepAlive: false,
 		Insecure:         false,
 		Tls:              nil,
 		ResponseContains: "o",
 	}
-	n := 10
+	n := 100
 	stat := cli.Do(context.Background(), 1, n, req)
 	fmt.Println(stat.FormatString())
 	assert.Equal(t, stat.HasCalled, n, fmt.Sprintf("hasCalled must equal %d", n))

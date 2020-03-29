@@ -31,9 +31,6 @@ func (cli *Client) SetTLSConfig(tlsCfg *tls.Config) {
 }
 
 func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
-	totalTimer := timing.NewTimer()
-	totalTimer.Reset()
-
 	if strings.ToUpper(req.Scheme) == "HTTPS" {
 		if req.Tls != nil {
 			cli.SetTLSConfig(req.Tls)
@@ -77,7 +74,7 @@ func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
 exit:
 	wg.Wait()
 	// 计算返回值
-	return CalcStats(c, n, totalTimer.Duration(), req.ResponseContains, respChan)
+	return CalcStats(req.URL, c, n, req.ResponseContains, respChan)
 }
 
 func (cli *Client) toResponse(timer *timing.Timer, req *http.Request, readBody bool) *Response {
