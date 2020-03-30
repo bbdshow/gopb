@@ -45,7 +45,7 @@ type Request struct {
 }
 
 func (r *Request) GenHTTPRequest() *http.Request {
-	formatURL := ""
+	formatURL := r.URL
 	if len(r.Params) > 0 {
 		if !strings.HasSuffix(r.URL, "?") {
 			formatURL = r.URL + "?"
@@ -57,13 +57,17 @@ func (r *Request) GenHTTPRequest() *http.Request {
 
 		formatURL = formatURL + strings.TrimRight(param, "&")
 	}
-	_url, _ := url.Parse(formatURL)
+	_url, err := url.Parse(formatURL)
+	if err != nil {
+		panic("url parse " + err.Error())
+	}
 	req := &http.Request{
 		Method:        r.Method,
 		URL:           _url,
 		Body:          nil,
 		GetBody:       nil,
 		ContentLength: 0,
+		Header:        http.Header{},
 	}
 	for k, v := range r.Headers {
 		req.Header.Set(k, v)

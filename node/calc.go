@@ -39,26 +39,26 @@ func (r StatResult) String() string {
 
 func (r StatResult) FormatString() string {
 	return fmt.Sprintf(`========== Benchmark ==========
-	URL: %s
-	Concurrent: %d
-	Total calls: %d
-	Succeed: %d
-	Error: %d
-	Response body size: %s
+URL: %s
+Concurrent: %d
+Total calls: %d
+Succeed: %d
+Error: %d
+Response body size: %s
 ========== Times ==========
-	Total time: %s
-	Requests per second: %.2f
-	Avg time per request: %s
-	Median time per request: %s
-	95th percentile time: %s
-	99th percentile time: %s
-	Slowest time for request: %s
+Total time: %s
+Requests per second: %.2f
+Avg time per request: %s
+Median time per request: %s
+95th percentile time: %s
+99th percentile time: %s
+Slowest time for request: %s
 ========== Status ==========
-	Status code 2xx: %d
-	Status code 3xx: %d
-	Status code 4xx: %d
-	Status code 5xx: %d
-	Match Response: %d`,
+Status code 2xx: %d
+Status code 3xx: %d
+Status code 4xx: %d
+Status code 5xx: %d
+Match Response: %d`,
 		r.URL, r.Concurrent, r.TotalCalls, r.Succeed, r.Errors, byteSizeToString(r.ResponseBodySize),
 		timeMillToString(int(r.Duration)), r.RequestsPerSecond, timeMillToString(r.AvgTime), timeMillToString(r.LineMedianTime),
 		timeMillToString(r.Line95Time), timeMillToString(r.Line99Time), timeMillToString(r.MaxTime),
