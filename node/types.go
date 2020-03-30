@@ -40,6 +40,7 @@ func (r *Request) GenHTTPRequest() *http.Request {
 	if err != nil {
 		panic("url parse " + err.Error())
 	}
+	r.Scheme = _url.Scheme
 	req := &http.Request{
 		Method:        r.Method,
 		URL:           _url,

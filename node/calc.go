@@ -73,11 +73,11 @@ func byteSizeToString(s int64) string {
 	size := float64(s)
 	switch {
 	case size >= 1e4 && size < 1e7:
-		return fmt.Sprintf("%.2f kb", size/1024)
+		return fmt.Sprintf("%.2f KB", size/1024)
 	case size >= 1e7 && size < 1e10:
-		return fmt.Sprintf("%.2f mb", size/(1024*1024))
+		return fmt.Sprintf("%.2f MB", size/(1024*1024))
 	case size >= 1e10:
-		return fmt.Sprintf("%.2f gb", size/(1024*1024*1024))
+		return fmt.Sprintf("%.2f GB", size/(1024*1024*1024))
 	}
 	return fmt.Sprintf("%d b", s)
 }
