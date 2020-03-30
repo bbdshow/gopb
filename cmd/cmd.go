@@ -33,11 +33,13 @@ var (
 	responseBodyContains string
 
 	disableKeepAlives bool
+
+	filename string
 )
 
 func init() {
 
-	rootCmd.AddCommand(GetStartCmd())
+	rootCmd.AddCommand(GetStartCmd(), GetGenerateCmd())
 }
 
 func Execute() error {
@@ -103,8 +105,20 @@ func GetStartCmd() *cobra.Command {
 	return startCmd
 }
 
-func GenRequestFile() *cobra.Command {
-	return &cobra.Command{}
+func GetGenerateCmd() *cobra.Command {
+	generate := &cobra.Command{
+		Use:     "generate",
+		Short:   "generate empty requests config, support json",
+		Example: "generate json",
+		Args:    cobra.ExactArgs(0),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return GenEmptyFile(filename)
+		},
+	}
+
+	generate.Flags().StringVarP(&filename, "filename", "f", defaultRequestConfigsJSON, "request configs filename")
+
+	return generate
 }
 
 func stringToHeaders(v string) map[string]string {

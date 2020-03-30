@@ -10,27 +10,6 @@ import (
 	"strings"
 )
 
-type Config struct {
-	Concurrent int
-	TotalCalls int
-	Port       string
-	Nodes      []string // 每个node设置并发和总请求数
-}
-
-type Setting struct {
-	Concurrent       int
-	TotalCalls       int
-	Method           string
-	Scheme           string
-	Params           map[string]string
-	Headers          map[string]string
-	DisableKeepAlive bool
-	Insecure         bool // 建立不安全连接
-	Tls              *tls.Config
-	ResponseContains string
-	Body             string
-}
-
 type Request struct {
 	Method           string
 	Scheme           string
