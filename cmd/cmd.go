@@ -82,7 +82,7 @@ func GetStartCmd() *cobra.Command {
 				Scheme:           _url.Scheme,
 				URL:              _url.String(),
 				Params:           nil,
-				Headers:          stringToHeaders(headers),
+				Headers:          StringToHeaders(headers),
 				Body:             body,
 				DisableKeepAlive: disableKeepAlives,
 				Insecure:         false,
@@ -174,18 +174,6 @@ func GetGenerateCmd() *cobra.Command {
 	return generate
 }
 
-func stringToHeaders(v string) map[string]string {
-	headers := make(map[string]string)
-	kvs := strings.Split(v, "\n")
-	for _, kv := range kvs {
-		strs := strings.Split(kv, ":")
-		if len(strs) == 2 {
-			headers[strs[0]] = strs[1]
-		}
-	}
-	return headers
-}
-
 func SerialDo(cfgs RequestConfigs, statChan chan *node.StatResult) {
 	cli := node.NewClient()
 	for _, cfg := range cfgs {
@@ -226,4 +214,16 @@ func ParallelDo(cfgs RequestConfigs, statChan chan *node.StatResult) {
 	}
 	wg.Wait()
 	close(statChan)
+}
+
+func StringToHeaders(v string) map[string]string {
+	headers := make(map[string]string)
+	kvs := strings.Split(v, "\n")
+	for _, kv := range kvs {
+		strs := strings.Split(kv, ":")
+		if len(strs) == 2 {
+			headers[strs[0]] = strs[1]
+		}
+	}
+	return headers
 }

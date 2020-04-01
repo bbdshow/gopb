@@ -84,9 +84,8 @@ func byteSizeToString(s int64) string {
 	return fmt.Sprintf("%d b", s)
 }
 
-var errCount int64
-
 func ConstantlyCalcStats(url string, c int, contains string, stats chan *Response) *StatResult {
+	var errCount int64
 	r := &StatResult{
 		URL:        url,
 		Concurrent: c,
