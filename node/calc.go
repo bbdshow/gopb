@@ -16,7 +16,8 @@ type StatResult struct {
 	SumTime           float64 `json:"sum_time"`
 	TotalCalls        int     `json:"total_calls"`
 	Contains          int     `json:"contains"`
-	ResponseBodySize  int64   `json:"response_body_size"`
+	RequestSize       int64   `json:"request_size"`
+	ResponseSize      int64   `json:"response_size"`
 	Succeed           int     `json:"succeed"`
 	Errors            int     `json:"errors"`
 	Resp200           int     `json:"resp_2xx"`
@@ -44,6 +45,7 @@ Concurrent: %d
 Total calls: %d
 Succeed: %d
 Error: %d
+Request body size: %s
 Response body size: %s
 ========== Times ==========
 Total time: %s
@@ -58,8 +60,8 @@ Status code 2xx: %d
 Status code 3xx: %d
 Status code 4xx: %d
 Status code 5xx: %d
-Match Response: %d`,
-		r.URL, r.Concurrent, r.TotalCalls, r.Succeed, r.Errors, byteSizeToString(r.ResponseBodySize),
+Match response: %d`,
+		r.URL, r.Concurrent, r.TotalCalls, r.Succeed, r.Errors, byteSizeToString(r.RequestSize), byteSizeToString(r.ResponseSize),
 		timeMillToString(int(r.Duration)), r.RequestsPerSecond, timeMillToString(r.AvgTime), timeMillToString(r.LineMedianTime),
 		timeMillToString(r.Line95Time), timeMillToString(r.Line99Time), timeMillToString(r.MaxTime),
 		r.Resp200, r.Resp300, r.Resp400, r.Resp500, r.Contains)
@@ -105,7 +107,8 @@ func ConstantlyCalcStats(url string, c int, contains string, stats chan *Respons
 				errCount++
 				r.Errors++
 			}
-			r.ResponseBodySize += stat.Size
+			r.RequestSize += stat.RequestSize
+			r.ResponseSize += stat.ResponseSize
 			if len(contains) > 0 && len(stat.Body) > 0 {
 				if strings.Contains(stat.Body, contains) {
 					r.Contains++

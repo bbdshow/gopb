@@ -101,20 +101,21 @@ exit:
 func (cli *Client) toResponse(timer *timing.Timer, req *http.Request, readBody bool) *Response {
 	resp, err := cli.client.Do(req)
 	obj := &Response{
-		Size:       0,
-		StatusCode: 0,
-		Duration:   timer.Duration(),
-		Error:      err,
-		Body:       "",
+		RequestSize:  req.ContentLength,
+		ResponseSize: 0,
+		StatusCode:   0,
+		Duration:     timer.Duration(),
+		Error:        err,
+		Body:         "",
 	}
 	if err == nil {
 		obj.StatusCode = resp.StatusCode
-		obj.Size = resp.ContentLength // 如果 resp.ContentLength = -1 也没关系
+		obj.ResponseSize = resp.ContentLength // 如果 resp.ContentLength = -1 也没关系
 		if readBody {
 			b, err := ioutil.ReadAll(resp.Body)
 			if err == nil {
 				obj.Body = string(b)
-				obj.Size = int64(len(b))
+				obj.ResponseSize = int64(len(b))
 			}
 		}
 		// close

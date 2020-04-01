@@ -63,9 +63,10 @@ func (r *Request) GenHTTPRequest() *http.Request {
 }
 
 type Response struct {
-	Size       int64  `json:"size"`
-	StatusCode int    `json:"status_code"`
-	Duration   int64  `json:"duration"` // micro
-	Error      error  `json:"error"`
-	Body       string `json:"body"`
+	RequestSize  int64  `json:"request_size"`
+	ResponseSize int64  `json:"response_size"`
+	StatusCode   int    `json:"status_code"`
+	Duration     int64  `json:"duration"` // micro
+	Error        error  `json:"error"`
+	Body         string `json:"body"`
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github/huzhongqing/gopb/node"
+	"log"
 	"net/url"
 	"strings"
 	"sync"
@@ -36,7 +37,9 @@ var (
 
 	disableKeepAlives bool
 
-	filename string
+	filename   string
+	mode       string
+	resultSave bool
 )
 
 func init() {
@@ -103,16 +106,17 @@ func GetStartCmd() *cobra.Command {
 	startCmd.Flags().StringVar(&headers, "headers", "User-Agent:gopb_benchmark\nContent-Type:text/html;", "headers use '\\n' as the separator ")
 	startCmd.Flags().StringVarP(&body, "body", "b", "", "request body")
 	startCmd.Flags().StringVar(&responseBodyContains, "contains", "", "response body contains")
-	startCmd.Flags().BoolVar(&disableKeepAlives, "disableKeepAlives", false, "disableKeepAlives")
+	startCmd.Flags().BoolVar(&disableKeepAlives, "disable-keep-alives", false, "disableKeepAlives")
+	startCmd.Flags().BoolVarP(&resultSave, "result-save", "s", false, "requests the result stats to save the file")
 	return startCmd
 }
 
 func GetStartWithFileCmd() *cobra.Command {
 	startCmd := &cobra.Command{
-		Use:     "startWithFile [mode] ",
-		Short:   "start with request config file, mode support serial | parallel",
-		Example: "startWithFile serial -f ./request_config.json",
-		Args:    cobra.ExactArgs(1),
+		Use:     "start-with-file",
+		Short:   "start with request config file",
+		Example: "start-with-file -m parallel -f ./request_config.json",
+		Args:    cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfgs, err := ReadRequestConfigsFile(filename)
 			if err != nil {
@@ -120,7 +124,7 @@ func GetStartWithFileCmd() *cobra.Command {
 			}
 			statChan := make(chan *node.StatResult, len(cfgs))
 			go func() {
-				switch strings.ToLower(args[0]) {
+				switch strings.ToLower(mode) {
 				case "parallel":
 					ParallelDo(cfgs, statChan)
 				default:
@@ -128,20 +132,29 @@ func GetStartWithFileCmd() *cobra.Command {
 				}
 			}()
 
+			stats := make([]*node.StatResult, 0, len(cfgs))
 			for {
 				select {
 				case stat := <-statChan:
 					if stat == nil {
+						if resultSave {
+							return StatsResultToFile(stats, ToSaveFilename(filename))
+						}
 						return nil
 					}
-					fmt.Println(stat.FormatString())
+					if resultSave {
+						stats = append(stats, stat)
+					} else {
+						fmt.Println(stat.FormatString())
+					}
 				}
 			}
 		},
 	}
 
 	startCmd.Flags().StringVarP(&filename, "filename", "f", defaultRequestConfigsJSON, "request configs filename")
-
+	startCmd.Flags().StringVarP(&mode, "mode", "m", "serial", "file requests mode support serial | parallel")
+	startCmd.Flags().BoolVarP(&resultSave, "result-save", "s", false, "requests the result stats to save the file")
 	return startCmd
 }
 
@@ -180,7 +193,12 @@ func SerialDo(cfgs RequestConfigs, statChan chan *node.StatResult) {
 		if cfg.GetDuration() > 0 {
 			ctx, _ = context.WithTimeout(ctx, cfg.GetDuration())
 		}
-		statChan <- cli.Do(ctx, cfg.Concurrent, cfg.TotalCalls, cfg.ToRequest())
+		request, err := cfg.ToRequest()
+		if err != nil {
+			log.Printf("tls config %s \n", err.Error())
+			break
+		}
+		statChan <- cli.Do(ctx, cfg.Concurrent, cfg.TotalCalls, request)
 	}
 	close(statChan)
 }
@@ -195,8 +213,13 @@ func ParallelDo(cfgs RequestConfigs, statChan chan *node.StatResult) {
 			if cfg.GetDuration() > 0 {
 				ctx, _ = context.WithTimeout(ctx, cfg.GetDuration())
 			}
-			stat := cli.Do(ctx, cfg.Concurrent, cfg.TotalCalls, cfg.ToRequest())
-			statChan <- stat
+			request, err := cfg.ToRequest()
+			if err != nil {
+				log.Printf("tls config %s \n", err.Error())
+			} else {
+				stat := cli.Do(ctx, cfg.Concurrent, cfg.TotalCalls, request)
+				statChan <- stat
+			}
 
 			wg.Done()
 		}(cfg)

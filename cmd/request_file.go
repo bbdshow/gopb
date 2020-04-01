@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"crypto/tls"
 	"encoding/json"
+	"fmt"
 	"github/huzhongqing/gopb/node"
 	"io/ioutil"
+	"strings"
 	"time"
 )
 
@@ -27,7 +30,7 @@ type RequestConfig struct {
 	Contains          string            `json:"contains"`
 }
 
-func (v RequestConfig) ToRequest() node.Request {
+func (v RequestConfig) ToRequest() (node.Request, error) {
 	req := node.Request{
 		Method:           v.Method,
 		URL:              v.URL,
@@ -40,9 +43,15 @@ func (v RequestConfig) ToRequest() node.Request {
 		ResponseContains: v.Contains,
 	}
 	if v.CertFilename != "" && v.KeyFilename != "" {
-
+		cert, err := tls.LoadX509KeyPair(v.CertFilename, v.KeyFilename)
+		if err != nil {
+			return node.Request{}, err
+		}
+		req.Tls = &tls.Config{
+			Certificates: []tls.Certificate{cert},
+		}
 	}
-	return req
+	return req, nil
 }
 
 func (v RequestConfig) GetDuration() time.Duration {
@@ -54,7 +63,7 @@ func (v RequestConfig) GetDuration() time.Duration {
 }
 
 var (
-	defaultRequestConfigsJSON = "./request_configs.json"
+	defaultRequestConfigsJSON = "./req_cfg.json"
 )
 
 func GenEmptyFile(filename string) error {
@@ -96,4 +105,17 @@ func ReadRequestConfigsFile(filename string) (RequestConfigs, error) {
 		return nil, err
 	}
 	return cfgs, nil
+}
+
+func ToSaveFilename(filename string) string {
+	suffix := fmt.Sprintf("_%d_stat.json", time.Now().Unix())
+	if strings.HasSuffix(filename, ".json") {
+		return strings.Replace(filename, ".json", suffix, 1)
+	}
+	return filename + suffix
+}
+
+func StatsResultToFile(stats []*node.StatResult, filename string) error {
+	b, _ := json.MarshalIndent(stats, "", "\t")
+	return ioutil.WriteFile(filename, b, 0666)
 }
