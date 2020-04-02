@@ -17,7 +17,7 @@ type RequestConfigs []RequestConfig
 type RequestConfig struct {
 	Duration          string            `json:"duration"`
 	Concurrent        int               `json:"concurrent"`
-	TotalCalls        int               `json:"total_calls"`
+	CallsNumber       int               `json:"calls_number"`
 	Method            string            `json:"method"`
 	URL               string            `json:"url"`
 	Headers           map[string]string `json:"headers"`
@@ -75,7 +75,7 @@ func GenEmptyFile(filename string) error {
 	cfgs = append(cfgs, RequestConfig{
 		Duration:          "0s",
 		Concurrent:        1,
-		TotalCalls:        -1,
+		CallsNumber:       -1,
 		Method:            "",
 		URL:               "",
 		Headers:           map[string]string{},

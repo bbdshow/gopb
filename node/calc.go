@@ -14,7 +14,7 @@ type StatResult struct {
 	Concurrent        int     `json:"concurrent"` // 并发
 	Duration          int64   `json:"duration"`
 	SumTime           float64 `json:"sum_time"`
-	TotalCalls        int     `json:"total_calls"`
+	CallsNumber       int     `json:"calls_number"`
 	Contains          int     `json:"contains"`
 	RequestSize       int64   `json:"request_size"`
 	ResponseSize      int64   `json:"response_size"`
@@ -42,7 +42,7 @@ func (r StatResult) FormatString() string {
 	return fmt.Sprintf(`========== Benchmark ==========
 URL: %s
 Concurrent: %d
-Total calls: %d
+Total calls number: %d
 Succeed: %d
 Error: %d
 Request body size: %s
@@ -61,7 +61,7 @@ Status code 3xx: %d
 Status code 4xx: %d
 Status code 5xx: %d
 Match response: %d`,
-		r.URL, r.Concurrent, r.TotalCalls, r.Succeed, r.Errors, byteSizeToString(r.RequestSize), byteSizeToString(r.ResponseSize),
+		r.URL, r.Concurrent, r.CallsNumber, r.Succeed, r.Errors, byteSizeToString(r.RequestSize), byteSizeToString(r.ResponseSize),
 		timeMillToString(int(r.Duration)), r.RequestsPerSecond, timeMillToString(r.AvgTime), timeMillToString(r.LineMedianTime),
 		timeMillToString(r.Line95Time), timeMillToString(r.Line99Time), timeMillToString(r.MaxTime),
 		r.Resp200, r.Resp300, r.Resp400, r.Resp500, r.Contains)
@@ -98,7 +98,7 @@ func ConstantlyCalcStats(url string, c int, contains string, stats chan *Respons
 			if stat == nil {
 				goto exitFor
 			}
-			r.TotalCalls++
+			r.CallsNumber++
 			if stat.Error != nil {
 				if errCount < 10 || errCount%1000 == 0 {
 					log.Printf("error count %d: %s", errCount+1, stat.Error.Error())

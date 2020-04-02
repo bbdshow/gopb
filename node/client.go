@@ -42,7 +42,7 @@ func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
 	totalTimer := timing.NewTimer()
 	totalTimer.Reset()
 	if strings.ToUpper(req.Scheme) == "HTTPS" {
-		if req.Tls != nil {
+		if req.Tls != nil && req.Insecure {
 			cli.SetTLSConfig(req.Tls)
 		}
 	}

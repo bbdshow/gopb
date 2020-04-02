@@ -25,7 +25,7 @@ var (
 	// 并发
 	concurrent int
 	// 请求数
-	totalCalls int
+	callsNumber int
 	// 持续时间
 	duration time.Duration
 
@@ -93,16 +93,16 @@ func GetStartCmd() *cobra.Command {
 
 			if duration.Milliseconds() > 0 {
 				ctx, _ = context.WithTimeout(ctx, duration)
-				totalCalls = -1 // 不限制总数
+				callsNumber = -1 // 不限制总数
 			}
-			stat := node.NewClient().Do(ctx, concurrent, totalCalls, req)
+			stat := node.NewClient().Do(ctx, concurrent, callsNumber, req)
 			fmt.Println(stat.FormatString())
 			return nil
 		},
 	}
 	startCmd.Flags().IntVarP(&concurrent, "concurrent", "c", 1, "concurrent requests")
-	startCmd.Flags().IntVarP(&totalCalls, "totalCalls", "t", -1, "total calls number, -1 no limit")
-	startCmd.Flags().DurationVarP(&duration, "duration", "d", 0, "benchmark duration time, total calls is invalid when set")
+	startCmd.Flags().IntVarP(&callsNumber, "calls-number", "n", -1, "total calls number, -1 no limit")
+	startCmd.Flags().DurationVarP(&duration, "duration-time", "t", 0, "benchmark duration time, total calls is invalid when set")
 	startCmd.Flags().StringVar(&headers, "headers", "User-Agent:gopb_benchmark\nContent-Type:text/html;", "headers use '\\n' as the separator ")
 	startCmd.Flags().StringVarP(&body, "body", "b", "", "request body")
 	startCmd.Flags().StringVar(&responseBodyContains, "contains", "", "response body contains")
@@ -186,7 +186,7 @@ func SerialDo(cfgs RequestConfigs, statChan chan *node.StatResult) {
 			log.Printf("tls config %s \n", err.Error())
 			break
 		}
-		statChan <- cli.Do(ctx, cfg.Concurrent, cfg.TotalCalls, request)
+		statChan <- cli.Do(ctx, cfg.Concurrent, cfg.CallsNumber, request)
 	}
 	close(statChan)
 }
@@ -205,7 +205,7 @@ func ParallelDo(cfgs RequestConfigs, statChan chan *node.StatResult) {
 			if err != nil {
 				log.Printf("tls config %s \n", err.Error())
 			} else {
-				stat := cli.Do(ctx, cfg.Concurrent, cfg.TotalCalls, request)
+				stat := cli.Do(ctx, cfg.Concurrent, cfg.CallsNumber, request)
 				statChan <- stat
 			}
 

@@ -4,7 +4,9 @@ go 1.14
 
 require (
 	github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d // indirect
+	github.com/go-echarts/go-echarts v0.0.0-20190915064101-cbb3b43ade5d // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
+	github.com/gorilla/websocket v1.4.2
 	github.com/shirou/gopsutil v2.20.2+incompatible
 	github.com/spf13/cobra v0.0.7
 	github.com/spf13/pflag v1.0.5 // indirect
