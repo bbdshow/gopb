@@ -73,7 +73,7 @@ func (cli Client) Do(ctx context.Context, c, n int, req Request) *StatResult {
 				// 任务退出，toResponse 会在timeout或者执行完成后退出
 				rrCh := make(chan *Response, 1)
 				go func() {
-					rrCh <- cli.toResponse(timer, request.Clone(context.TODO()), req.ResponseContains != "")
+					rrCh <- cli.toResponse(timer, req.GenHTTPRequest(), req.ResponseContains != "")
 				}()
 
 				select {
@@ -99,6 +99,7 @@ exit:
 }
 
 func (cli *Client) toResponse(timer *timing.Timer, req *http.Request, readBody bool) *Response {
+	//fmt.Println("req", req)
 	resp, err := cli.client.Do(req)
 	obj := &Response{
 		RequestSize:  req.ContentLength,

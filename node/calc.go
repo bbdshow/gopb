@@ -134,6 +134,9 @@ func ConstantlyCalcStats(url string, c int, contains string, stats chan *Respons
 		break
 	}
 
+	if len(r.Times) == 0 {
+		return r
+	}
 	// 升序，然后计算时间分布
 	sort.Ints(r.Times)
 

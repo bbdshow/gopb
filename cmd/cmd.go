@@ -186,6 +186,7 @@ func SerialDo(cfgs RequestConfigs, statChan chan *node.StatResult) {
 			log.Printf("tls config %s \n", err.Error())
 			break
 		}
+		//fmt.Println("config", cfg)
 		statChan <- cli.Do(ctx, cfg.Concurrent, cfg.CallsNumber, request)
 	}
 	close(statChan)
